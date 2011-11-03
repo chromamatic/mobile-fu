@@ -6,8 +6,10 @@ module ActionController
                           'audiovox|motorola|samsung|telit|upg1|windows ce|ucweb|astel|plucker|' +
                           'x320|x240|j2me|sgh|portable|sprint|docomo|kddi|softbank|android|mmp|' +
                           'pdxgw|netfront|xiino|vodafone|portalmmm|sagem|mot-|sie-|ipod|up\\.b|' +
-                          'webos|amoi|novarra|cdm|alcatel|pocket|ipad|iphone|mobileexplorer|' +
+                          'webos|amoi|novarra|cdm|alcatel|pocket|iphone|mobileexplorer|wp7|' +
                           'mobile'
+    
+    EXCLUDED_AGENTS    =  'ipad'
     
     def self.included(base)
       base.extend(ClassMethods)
@@ -59,18 +61,16 @@ module ActionController
       # Forces the request format to be :mobile
       
       def force_mobile_format
-        if !request.xhr?
-          request.format = :mobile
-          session[:mobile_view] = true if session[:mobile_view].nil?
-        end
+        request.format = :mobile
+        session[:mobile_view] = true if session[:mobile_view].nil?
       end
       
       # Determines the request format based on whether the device is mobile or if
       # the user has opted to use either the 'Standard' view or 'Mobile' view.
       
       def set_mobile_format
-        if is_mobile_device? && !request.xhr?
-          request.format = session[:mobile_view] == false ? :html : :mobile
+        if is_mobile_device? || session[:force_mobile_test]
+          request.format = :mobile unless session[:mobile_view] == false
           session[:mobile_view] = true if session[:mobile_view].nil?
         end
       end
@@ -86,7 +86,9 @@ module ActionController
       # the device making the request is matched to a device in our regex.
       
       def is_mobile_device?
-        request.user_agent.to_s.downcase =~ Regexp.new(ActionController::MobileFu::MOBILE_USER_AGENTS)
+        ua = request.user_agent.to_s.downcase
+        !ua.match(Regexp.new(ActionController::MobileFu::EXCLUDED_AGENTS)) and
+          ua.match(Regexp.new(ActionController::MobileFu::MOBILE_USER_AGENTS))
       end
 
       # Can check for a specific user agent
